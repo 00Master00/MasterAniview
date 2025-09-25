@@ -14,8 +14,17 @@ export interface Anime {
   image: string;
 }
 
+export interface Activity {
+  id: number;
+  type: 'add' | 'update' | 'delete';
+  animeTitle: string;
+  timestamp: Date;
+  description: string;
+}
+
 interface AnimeContextType {
   animeList: Anime[];
+  activities: Activity[];
   addAnime: (anime: Omit<Anime, 'id'>) => void;
   updateAnime: (id: number, anime: Partial<Anime>) => void;
   deleteAnime: (id: number) => void;
@@ -81,6 +90,29 @@ const initialAnimeData: Anime[] = [
 
 export function AnimeProvider({ children }: { children: ReactNode }) {
   const [animeList, setAnimeList] = useState<Anime[]>(initialAnimeData);
+  const [activities, setActivities] = useState<Activity[]>([
+    {
+      id: 1,
+      type: 'add',
+      animeTitle: 'Jujutsu Kaisen Season 2',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+      description: 'ถูกเพิ่มเข้าระบบ'
+    },
+    {
+      id: 2,
+      type: 'update',
+      animeTitle: 'One Piece',
+      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
+      description: 'มีการอัปเดตจำนวนตอน'
+    },
+    {
+      id: 3,
+      type: 'delete',
+      animeTitle: 'Test Anime',
+      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+      description: 'ถูกลบออกจากระบบ'
+    }
+  ]);
 
   const addAnime = (newAnime: Omit<Anime, 'id'>) => {
     const id = Math.max(...animeList.map(a => a.id), 0) + 1;
@@ -89,18 +121,54 @@ export function AnimeProvider({ children }: { children: ReactNode }) {
       id
     };
     setAnimeList(prev => [anime, ...prev]);
+    
+    // Add activity
+    const activityId = Math.max(...activities.map(a => a.id), 0) + 1;
+    setActivities(prev => [{
+      id: activityId,
+      type: 'add',
+      animeTitle: anime.title,
+      timestamp: new Date(),
+      description: 'ถูกเพิ่มเข้าระบบ'
+    }, ...prev.slice(0, 9)]); // Keep only 10 latest activities
   };
 
   const updateAnime = (id: number, updates: Partial<Anime>) => {
+    const anime = animeList.find(a => a.id === id);
     setAnimeList(prev => 
       prev.map(anime => 
         anime.id === id ? { ...anime, ...updates } : anime
       )
     );
+    
+    // Add activity
+    if (anime) {
+      const activityId = Math.max(...activities.map(a => a.id), 0) + 1;
+      setActivities(prev => [{
+        id: activityId,
+        type: 'update',
+        animeTitle: anime.title,
+        timestamp: new Date(),
+        description: 'มีการอัปเดตข้อมูล'
+      }, ...prev.slice(0, 9)]); // Keep only 10 latest activities
+    }
   };
 
   const deleteAnime = (id: number) => {
+    const anime = animeList.find(a => a.id === id);
     setAnimeList(prev => prev.filter(anime => anime.id !== id));
+    
+    // Add activity
+    if (anime) {
+      const activityId = Math.max(...activities.map(a => a.id), 0) + 1;
+      setActivities(prev => [{
+        id: activityId,
+        type: 'delete',
+        animeTitle: anime.title,
+        timestamp: new Date(),
+        description: 'ถูกลบออกจากระบบ'
+      }, ...prev.slice(0, 9)]); // Keep only 10 latest activities
+    }
   };
 
   const getAnimeById = (id: number) => {
@@ -110,6 +178,7 @@ export function AnimeProvider({ children }: { children: ReactNode }) {
   return (
     <AnimeContext.Provider value={{
       animeList,
+      activities,
       addAnime,
       updateAnime,
       deleteAnime,

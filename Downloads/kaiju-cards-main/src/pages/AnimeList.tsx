@@ -109,8 +109,16 @@ export default function AnimeList() {
         {filteredAnime.map((anime) => (
           <Card key={anime.id} className="bg-gradient-card border-border shadow-card hover:shadow-hover transition-all duration-300 group">
             <CardHeader className="pb-3">
-              <div className="aspect-video bg-muted rounded-lg mb-3 flex items-center justify-center">
-                <Tv className="w-8 h-8 text-muted-foreground" />
+              <div className="aspect-video bg-muted rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+                {anime.image && anime.image !== "/placeholder.svg" ? (
+                  <img 
+                    src={anime.image} 
+                    alt={anime.title}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  <Tv className="w-8 h-8 text-muted-foreground" />
+                )}
               </div>
               <CardTitle className="text-lg group-hover:text-primary transition-colors duration-200">
                 {anime.title}

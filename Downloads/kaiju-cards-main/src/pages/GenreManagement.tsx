@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAnime } from "@/contexts/AnimeContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +9,8 @@ import {
   Plus, 
   Trash2, 
   Tag,
-  Search
+  Search,
+  Eye
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -25,10 +28,34 @@ const initialGenres = [
 ];
 
 export default function GenreManagement() {
-  const [genres, setGenres] = useState(initialGenres);
+  const navigate = useNavigate();
+  const { animeList } = useAnime();
   const [newGenre, setNewGenre] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
+
+  // Calculate actual genre counts from anime data
+  const getAllGenres = () => {
+    const genreCounts: { [key: string]: number } = {};
+    animeList.forEach(anime => {
+      anime.genre.forEach(genre => {
+        genreCounts[genre] = (genreCounts[genre] || 0) + 1;
+      });
+    });
+    
+    const allGenres = Array.from(new Set([
+      ...initialGenres.map(g => g.name),
+      ...Object.keys(genreCounts)
+    ]));
+    
+    return allGenres.map((genreName, index) => ({
+      id: index + 1,
+      name: genreName,
+      count: genreCounts[genreName] || 0
+    }));
+  };
+
+  const [genres, setGenres] = useState(getAllGenres());
 
   const filteredGenres = genres.filter(genre =>
     genre.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -157,9 +184,12 @@ export default function GenreManagement() {
             {filteredGenres.map((genre) => (
               <div
                 key={genre.id}
-                className="flex items-center justify-between p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors duration-200"
+                className="flex items-center justify-between p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors duration-200 group"
               >
-                <div className="flex items-center space-x-3">
+                <div 
+                  className="flex items-center space-x-3 flex-1 cursor-pointer"
+                  onClick={() => navigate(`/genres/${genre.name}/anime`)}
+                >
                   <div className="w-3 h-3 bg-primary rounded-full"></div>
                   <div>
                     <h3 className="font-medium text-foreground">
@@ -170,19 +200,31 @@ export default function GenreManagement() {
                     </p>
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDeleteGenre(genre.id, genre.name, genre.count)}
-                  className={`p-2 ${
-                    genre.count > 0 
-                      ? "text-muted-foreground cursor-not-allowed opacity-50" 
-                      : "text-destructive hover:text-destructive hover:bg-destructive/10"
-                  }`}
-                  disabled={genre.count > 0}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                <div className="flex items-center space-x-2">
+                  {genre.count > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate(`/genres/${genre.name}/anime`)}
+                      className="p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDeleteGenre(genre.id, genre.name, genre.count)}
+                    className={`p-2 ${
+                      genre.count > 0 
+                        ? "text-muted-foreground cursor-not-allowed opacity-50" 
+                        : "text-destructive hover:text-destructive hover:bg-destructive/10"
+                    }`}
+                    disabled={genre.count > 0}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>

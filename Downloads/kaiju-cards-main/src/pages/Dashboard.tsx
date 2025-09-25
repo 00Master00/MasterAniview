@@ -1,19 +1,39 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAnime } from "@/contexts/AnimeContext";
 import StatCard from "@/components/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { 
   Tv, 
   TrendingUp, 
   Users, 
   Star,
   Calendar,
-  Eye
+  Eye,
+  ArrowRight
 } from "lucide-react";
 
+function getTimeAgo(timestamp: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - timestamp.getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffHours / 24);
+  
+  if (diffDays > 0) {
+    return `${diffDays} วันที่ผ่านมา`;
+  } else if (diffHours > 0) {
+    return `${diffHours} ชั่วโมงที่ผ่านมา`;
+  } else {
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    return diffMinutes > 0 ? `${diffMinutes} นาทีที่ผ่านมา` : 'เมื่อสักครู่';
+  }
+}
+
 export default function Dashboard() {
-  const { animeList } = useAnime();
+  const { animeList, activities } = useAnime();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalAnime: 0,
     totalViews: 0,
@@ -99,11 +119,20 @@ export default function Dashboard() {
             {popularAnime.map((anime, index) => (
               <div
                 key={anime.id}
-                className="flex items-center space-x-4 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors duration-200"
+                onClick={() => navigate(`/anime/${anime.id}`)}
+                className="flex items-center space-x-4 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors duration-200 cursor-pointer group"
               >
                 <div className="w-2 h-2 bg-gradient-primary rounded-full"></div>
-                <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
-                  <Tv className="w-6 h-6 text-muted-foreground" />
+                <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                  {anime.image && anime.image !== "/placeholder.svg" ? (
+                    <img 
+                      src={anime.image} 
+                      alt={anime.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Tv className="w-6 h-6 text-muted-foreground" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="font-medium text-foreground truncate">
@@ -117,6 +146,7 @@ export default function Dashboard() {
                   <Badge variant="secondary" className="text-xs">
                     ⭐ {anime.rating}
                   </Badge>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                 </div>
               </div>
             ))}
@@ -133,50 +163,42 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
-              <div className="flex items-start space-x-3 p-3 bg-muted/30 rounded-lg">
-                <div className="w-2 h-2 bg-success rounded-full mt-2"></div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    เพิ่ม Anime ใหม่
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    "Jujutsu Kaisen Season 2" ถูกเพิ่มเข้าระบบ
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    2 ชั่วโมงที่ผ่านมา
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-start space-x-3 p-3 bg-muted/30 rounded-lg">
-                <div className="w-2 h-2 bg-info rounded-full mt-2"></div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    อัปเดตข้อมูล
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    "One Piece" มีการอัปเดตจำนวนตอน
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    5 ชั่วโมงที่ผ่านมา
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-3 p-3 bg-muted/30 rounded-lg">
-                <div className="w-2 h-2 bg-warning rounded-full mt-2"></div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    ลบข้อมูล
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    "Test Anime" ถูกลบออกจากระบบ
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    1 วันที่ผ่านมา
-                  </p>
-                </div>
-              </div>
+              {activities.slice(0, 3).map((activity) => {
+                const timeAgo = getTimeAgo(activity.timestamp);
+                const activityColor = activity.type === 'add' ? 'bg-success' : 
+                                    activity.type === 'update' ? 'bg-info' : 'bg-warning';
+                const activityTitle = activity.type === 'add' ? 'เพิ่ม Anime ใหม่' :
+                                    activity.type === 'update' ? 'อัปเดตข้อมูล' : 'ลบข้อมูล';
+                
+                return (
+                  <div 
+                    key={activity.id}
+                    className="flex items-start space-x-3 p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={() => {
+                      if (activity.type !== 'delete') {
+                        const anime = animeList.find(a => a.title === activity.animeTitle);
+                        if (anime) navigate(`/anime/${anime.id}`);
+                      }
+                    }}
+                  >
+                    <div className={`w-2 h-2 ${activityColor} rounded-full mt-2`}></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-foreground">
+                        {activityTitle}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        "{activity.animeTitle}" {activity.description}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {timeAgo}
+                      </p>
+                    </div>
+                    {activity.type !== 'delete' && (
+                      <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>

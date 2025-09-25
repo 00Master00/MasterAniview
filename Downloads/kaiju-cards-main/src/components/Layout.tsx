@@ -1,13 +1,17 @@
 import { ReactNode } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { 
   LayoutDashboard, 
   List, 
   Plus, 
   Settings,
-  Search,
-  Sparkles
+  Sparkles,
+  LogOut,
+  User
 } from "lucide-react";
 
 interface LayoutProps {
@@ -23,6 +27,11 @@ const navigation = [
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+  };
 
   return (
     <div className="min-h-screen bg-gradient-background">
@@ -37,7 +46,7 @@ export default function Layout({ children }: LayoutProps) {
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>
                 <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                  MasterAniview Manager
+                  Anime Manager
                 </span>
               </Link>
 
@@ -66,6 +75,25 @@ export default function Layout({ children }: LayoutProps) {
               </div>
             </div>
 
+            {/* User Info & Logout */}
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <User className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-foreground">{user?.name}</span>
+                <Badge variant="secondary" className="text-xs">
+                  {user?.email}
+                </Badge>
+              </div>
+              <Button
+                onClick={handleLogout}
+                variant="outline"
+                size="sm"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                ออกจากระบบ
+              </Button>
+            </div>
           </div>
         </div>
       </nav>

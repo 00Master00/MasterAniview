@@ -15,5 +15,4 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  base: "/MasterAniview-Manager/", // 👈 เพิ่มตรงนี้สำหรับ GitHub Pages
 }));
