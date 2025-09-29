@@ -38,9 +38,15 @@ export default function Login() {
     if (success) {
       toast({
         title: "เข้าสู่ระบบสำเร็จ!",
-        description: "ยินดีต้อนรับสู่ระบบจัดการ Anime",
+        description: "ยินดีต้อนรับเข้าสู่ MasterAniview",
       });
-      navigate("/");
+      
+      // Redirect based on user role
+      if (email === 'admin@anime.com') {
+        navigate("/admin");
+      } else {
+        navigate("/front");
+      }
     } else {
       setError("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
     }
@@ -57,7 +63,7 @@ export default function Login() {
             เข้าสู่ระบบ
           </CardTitle>
           <p className="text-muted-foreground">
-            ระบบจัดการ Anime Back Office
+            MasterAniview - เว็บจัดการอนิเมะ
           </p>
         </CardHeader>
 
@@ -72,8 +78,8 @@ export default function Login() {
           <Alert>
             <AlertDescription>
               <strong>บัญชีทดสอบ:</strong><br />
-              📧 admin@anime.com | 🔑 admin123<br />
-              📧 user@anime.com | 🔑 user123
+              📧 admin@anime.com | 🔑 admin123 (Admin Panel)<br />
+              📧 user@anime.com | 🔑 user123 (Front Office)
             </AlertDescription>
           </Alert>
 

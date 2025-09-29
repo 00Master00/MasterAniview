@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useAnime } from "@/contexts/AnimeContext";
+import { useAnimeData, type AnimeFormData } from "@/hooks/useAnimeData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,24 +13,23 @@ import {
   Plus, 
   Save,
   ArrowLeft,
-  ImageIcon
+  ImageIcon,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-interface AnimeFormData {
+interface FormData {
   title: string;
-  titleJapanese: string;
   description: string;
-  episodes: number;
-  rating: number;
-  year: number;
-  studio: string;
-  status: string;
+  publisher: string;
+  first_aired: string;
+  format: string;
   genres: string[];
-  image: string;
+  image_url: string;
+  popularity_score: number;
 }
 
-const statusOptions = ["Ongoing", "Completed", "Upcoming", "Movie"];
+const formatOptions = ["TV Series", "Movie", "OVA", "Special"];
 const availableGenres = [
   "Action", "Adventure", "Comedy", "Drama", "Fantasy", "Horror",
   "Mystery", "Romance", "Sci-Fi", "Supernatural", "Thriller", "Historical",
@@ -42,50 +41,48 @@ export default function AnimeForm() {
   const { id } = useParams();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { addAnime, updateAnime, getAnimeById } = useAnime();
+  const { getAnimeById, createAnime, updateAnime, createAnimeUpdate, loading } = useAnimeData();
   const isEditing = !!id;
 
-  const [formData, setFormData] = useState<AnimeFormData>({
+  const [formData, setFormData] = useState<FormData>({
     title: "",
-    titleJapanese: "",
     description: "",
-    episodes: 0,
-    rating: 0,
-    year: new Date().getFullYear(),
-    studio: "",
-    status: "Upcoming",
+    publisher: "",
+    first_aired: "",
+    format: "TV Series",
     genres: [],
-    image: ""
+    image_url: "",
+    popularity_score: 0
   });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Load existing anime data for editing
   useEffect(() => {
-    if (isEditing && id) {
-      const anime = getAnimeById(parseInt(id));
+    if (isEditing && id && !loading) {
+      const anime = getAnimeById(id);
       if (anime) {
         setFormData({
           title: anime.title,
-          titleJapanese: anime.titleJapanese,
           description: anime.description || "",
-          episodes: anime.episodes,
-          rating: anime.rating,
-          year: anime.year,
-          studio: anime.studio,
-          status: anime.status,
-          genres: anime.genre,
-          image: anime.image
+          publisher: anime.publisher || "",
+          first_aired: anime.first_aired || "",
+          format: anime.format || "TV Series",  
+          genres: anime.genres || [],
+          image_url: anime.image_url || "",
+          popularity_score: anime.popularity_score || 0
         });
-        if (anime.image) {
-          setImagePreview(anime.image);
+        if (anime.image_url) {
+          setImagePreview(anime.image_url);
         }
       }
     }
-  }, [id, isEditing, getAnimeById]);
+  }, [id, isEditing, getAnimeById, loading]);
 
   const [newGenre, setNewGenre] = useState("");
   const [imagePreview, setImagePreview] = useState<string>("");
 
-  const handleInputChange = (field: keyof AnimeFormData, value: string | number) => {
+  const handleInputChange = (field: keyof FormData, value: string | number) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -118,14 +115,14 @@ export default function AnimeForm() {
         setImagePreview(result);
         setFormData(prev => ({
           ...prev,
-          image: result
+          image_url: result
         }));
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validation
@@ -147,32 +144,57 @@ export default function AnimeForm() {
       return;
     }
 
-    // Save anime data
-    const animeData = {
-      title: formData.title,
-      titleJapanese: formData.titleJapanese,
-      description: formData.description,
-      genre: formData.genres,
-      rating: formData.rating,
-      episodes: formData.episodes,
-      status: formData.status,
-      year: formData.year,
-      studio: formData.studio,
-      image: formData.image || "/placeholder.svg"
-    };
+    setIsSubmitting(true);
 
-    if (isEditing && id) {
-      updateAnime(parseInt(id), animeData);
-    } else {
-      addAnime(animeData);
+    try {
+      // Prepare anime data for Supabase
+      const animeData: AnimeFormData = {
+        title: formData.title,
+        description: formData.description,
+        genres: formData.genres,
+        publisher: formData.publisher,
+        first_aired: formData.first_aired,
+        format: formData.format,
+        image_url: formData.image_url || null,
+        popularity_score: formData.popularity_score
+      };
+
+      let result;
+      if (isEditing && id) {
+        result = await updateAnime(id, animeData);
+      } else {
+        result = await createAnime(animeData);
+      }
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      // Create anime update for new anime
+      if (!isEditing && result.data) {
+        await createAnimeUpdate({
+          anime_id: result.data.id,
+          update_date: new Date().toISOString().split('T')[0],
+          update_type: 'new'
+        });
+      }
+
+      toast({
+        title: "สำเร็จ!",
+        description: isEditing ? "อัปเดตข้อมูล Anime เรียบร้อยแล้ว" : "เพิ่ม Anime ใหม่เรียบร้อยแล้ว",
+      });
+
+      navigate("/admin/anime");
+    } catch (error) {
+      toast({
+        title: "ข้อผิดพลาด",
+        description: "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง",
+        variant: "destructive"
+      });
+      console.error('Error saving anime:', error);
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    toast({
-      title: "สำเร็จ!",
-      description: isEditing ? "อัปเดตข้อมูล Anime เรียบร้อยแล้ว" : "เพิ่ม Anime ใหม่เรียบร้อยแล้ว",
-    });
-
-    navigate("/anime");
   };
 
   return (
@@ -182,7 +204,7 @@ export default function AnimeForm() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => navigate("/anime")}
+          onClick={() => navigate("/admin/anime")}
           className="p-2"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -207,97 +229,74 @@ export default function AnimeForm() {
                 <CardTitle>ข้อมูลพื้นฐาน</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="title">ชื่อ Anime *</Label>
-                    <Input
-                      id="title"
-                      value={formData.title}
-                      onChange={(e) => handleInputChange("title", e.target.value)}
-                      placeholder="เช่น Attack on Titan"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="titleJapanese">ชื่อภาษาญี่ปุ่น</Label>
-                    <Input
-                      id="titleJapanese"
-                      value={formData.titleJapanese}
-                      onChange={(e) => handleInputChange("titleJapanese", e.target.value)}
-                      placeholder="เช่น 進撃の巨人"
-                    />
-                  </div>
-                </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div className="space-y-2">
+                     <Label htmlFor="title">ชื่อ Anime *</Label>
+                     <Input
+                       id="title"
+                       value={formData.title}
+                       onChange={(e) => handleInputChange("title", e.target.value)}
+                       placeholder="เช่น Attack on Titan"
+                       required
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <Label htmlFor="publisher">ผู้จัดพิมพ์</Label>
+                     <Input
+                       id="publisher"
+                       value={formData.publisher}
+                       onChange={(e) => handleInputChange("publisher", e.target.value)}
+                       placeholder="เช่น Kodansha"
+                     />
+                   </div>
+                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="description">เรื่องย่อ</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => handleInputChange("description", e.target.value)}
-                    placeholder="เขียนเรื่องย่อของ Anime..."
-                    rows={4}
-                  />
-                </div>
+                 <div className="space-y-2">
+                   <Label htmlFor="description">เรื่องย่อ</Label>
+                   <Textarea
+                     id="description"
+                     value={formData.description}
+                     onChange={(e) => handleInputChange("description", e.target.value)}
+                     placeholder="เขียนเรื่องย่อของ Anime..."
+                     rows={4}
+                   />
+                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="episodes">จำนวนตอน</Label>
-                    <Input
-                      id="episodes"
-                      type="number"
-                      value={formData.episodes}
-                      onChange={(e) => handleInputChange("episodes", parseInt(e.target.value) || 0)}
-                      min="0"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="rating">คะแนน</Label>
-                    <Input
-                      id="rating"
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="10"
-                      value={formData.rating}
-                      onChange={(e) => handleInputChange("rating", parseFloat(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="year">ปี</Label>
-                    <Input
-                      id="year"
-                      type="number"
-                      value={formData.year}
-                      onChange={(e) => handleInputChange("year", parseInt(e.target.value) || 0)}
-                      min="1900"
-                      max="2030"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="status">สถานะ</Label>
-                    <select
-                      id="status"
-                      value={formData.status}
-                      onChange={(e) => handleInputChange("status", e.target.value)}
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                    >
-                      {statusOptions.map(status => (
-                        <option key={status} value={status}>{status}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="studio">สตูดิโอ</Label>
-                  <Input
-                    id="studio"
-                    value={formData.studio}
-                    onChange={(e) => handleInputChange("studio", e.target.value)}
-                    placeholder="เช่น Mappa, Ufotable"
-                  />
-                </div>
+                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                   <div className="space-y-2">
+                     <Label htmlFor="first_aired">วันที่เริ่มฉาย</Label>
+                     <Input
+                       id="first_aired"
+                       type="date"
+                       value={formData.first_aired}
+                       onChange={(e) => handleInputChange("first_aired", e.target.value)}
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <Label htmlFor="format">รูปแบบ</Label>
+                     <select
+                       id="format"
+                       value={formData.format}
+                       onChange={(e) => handleInputChange("format", e.target.value)}
+                       className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                     >
+                       {formatOptions.map(format => (
+                         <option key={format} value={format}>{format}</option>
+                       ))}
+                     </select>
+                   </div>
+                   <div className="space-y-2">
+                     <Label htmlFor="popularity_score">คะแนนความนิยม</Label>
+                     <Input
+                       id="popularity_score"
+                       type="number"
+                       min="0"
+                       max="100"
+                       value={formData.popularity_score}
+                       onChange={(e) => handleInputChange("popularity_score", parseInt(e.target.value) || 0)}
+                     />
+                   </div>
+                 </div>
               </CardContent>
             </Card>
 
@@ -407,32 +406,42 @@ export default function AnimeForm() {
                     อัปโหลดรูปภาพ
                   </Button>
                   {imagePreview && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setImagePreview("");
-                        setFormData(prev => ({ ...prev, image: "" }));
-                      }}
-                      className="w-full text-destructive hover:text-destructive"
-                    >
-                      <X className="w-4 h-4 mr-2" />
-                      ลบรูปภาพ
-                    </Button>
+                     <Button
+                       type="button"
+                       variant="outline"
+                       onClick={() => {
+                         setImagePreview("");
+                         setFormData(prev => ({ ...prev, image_url: "" }));
+                       }}
+                       className="w-full text-destructive hover:text-destructive"
+                     >
+                       <X className="w-4 h-4 mr-2" />
+                       ลบรูปภาพ
+                     </Button>
                   )}
                 </div>
               </CardContent>
             </Card>
 
             {/* Submit Button */}
-            <Button
-              type="submit"
-              className="w-full bg-gradient-primary hover:opacity-90 shadow-elegant"
-              size="lg"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {isEditing ? "อัปเดตข้อมูล" : "เพิ่ม Anime"}
-            </Button>
+             <Button
+               type="submit"
+               disabled={isSubmitting}
+               className="w-full bg-gradient-primary hover:opacity-90 shadow-elegant"
+               size="lg"
+             >
+               {isSubmitting ? (
+                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+               ) : (
+                 <Save className="w-4 h-4 mr-2" />
+               )}
+               {isSubmitting 
+                 ? "กำลังบันทึก..." 
+                 : isEditing 
+                   ? "อัปเดตข้อมูล" 
+                   : "เพิ่ม Anime"
+               }
+             </Button>
           </div>
         </div>
       </form>

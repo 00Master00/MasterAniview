@@ -4,6 +4,7 @@ interface User {
   id: number;
   email: string;
   name: string;
+  role: string;
 }
 
 interface AuthContextType {
@@ -18,8 +19,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Mock users for demo
 const mockUsers = [
-  { id: 1, email: 'admin@anime.com', password: 'admin123', name: 'Admin' },
-  { id: 2, email: 'user@anime.com', password: 'user123', name: 'User' },
+  { id: 1, email: 'admin@anime.com', password: 'admin123', name: 'Admin', role: 'admin' },
+  { id: 2, email: 'user@anime.com', password: 'user123', name: 'User', role: 'user' },
 ];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -44,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const foundUser = mockUsers.find(u => u.email === email && u.password === password);
     
     if (foundUser) {
-      const userInfo = { id: foundUser.id, email: foundUser.email, name: foundUser.name };
+      const userInfo = { id: foundUser.id, email: foundUser.email, name: foundUser.name, role: foundUser.role };
       setUser(userInfo);
       sessionStorage.setItem('currentUser', JSON.stringify(userInfo));
       setIsLoading(false);

@@ -9,6 +9,10 @@ const NotFound = () => {
     console.error("404 Error: User attempted to access non-existent route:", location.pathname);
   }, [location.pathname]);
 
+  // ตรวจสอบว่าอยู่ในส่วนของ admin หรือ front
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  const homeLink = isAdminRoute ? '/admin/' : '/front/';
+  
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-background">
       <div className="text-center max-w-md mx-auto px-4">
@@ -23,7 +27,7 @@ const NotFound = () => {
             ขออภัย หน้าที่คุณกำลังค้นหาไม่มีอยู่ในระบบ
           </p>
         </div>
-        <Link to="/">
+        <Link to={homeLink}>
           <Button className="bg-gradient-primary hover:opacity-90 shadow-elegant">
             กลับหน้าหลัก
           </Button>

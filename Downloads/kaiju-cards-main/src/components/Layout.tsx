@@ -19,10 +19,10 @@ interface LayoutProps {
 }
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "รายการ Anime", href: "/anime", icon: List },
-  { name: "เพิ่ม Anime", href: "/anime/add", icon: Plus },
-  { name: "จัดการ Genres", href: "/genres", icon: Settings },
+  { name: "Dashboard", href: "/admin/", icon: LayoutDashboard },
+  { name: "รายการ Anime", href: "/admin/anime", icon: List },
+  { name: "เพิ่ม Anime", href: "/admin/anime/add", icon: Plus },
+  { name: "จัดการ Genres", href: "/admin/genres", icon: Settings },
 ];
 
 export default function Layout({ children }: LayoutProps) {
@@ -41,7 +41,7 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex justify-between h-16">
             <div className="flex items-center space-x-8">
               {/* Logo */}
-              <Link to="/" className="flex items-center space-x-2 group">
+              <Link to="/admin/" className="flex items-center space-x-2 group">
                 <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center shadow-elegant group-hover:shadow-hover transition-all duration-300">
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>

@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useAnime } from "@/contexts/AnimeContext";
+import { useAnimeData } from "@/hooks/useAnimeData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Search, 
   Plus, 
@@ -13,7 +14,8 @@ import {
   Star,
   Calendar,
   Tv,
-  Filter
+  Filter,
+  Loader2
 } from "lucide-react";
 
 const genreColors: Record<string, string> = {
@@ -30,20 +32,42 @@ const genreColors: Record<string, string> = {
 export default function AnimeList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGenre, setSelectedGenre] = useState("");
-  const { animeList, deleteAnime } = useAnime();
+  const { animeList, loading, getAllGenres, deleteAnime } = useAnimeData();
+  const { toast } = useToast();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const filteredAnime = animeList.filter(anime => {
     const matchesSearch = anime.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         anime.titleJapanese.includes(searchTerm);
-    const matchesGenre = !selectedGenre || anime.genre.includes(selectedGenre);
+                         anime.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesGenre = !selectedGenre || anime.genres?.includes(selectedGenre);
     return matchesSearch && matchesGenre;
   });
 
-  const allGenres = Array.from(new Set(animeList.flatMap(anime => anime.genre)));
+  const allGenres = getAllGenres();
 
-  const handleDelete = (id: number) => {
-    if (confirm("คุณแน่ใจหรือไม่ที่จะลบ Anime นี้?")) {
-      deleteAnime(id);
+  const handleDelete = async (id: string, title: string) => {
+    if (confirm(`คุณแน่ใจหรือไม่ที่จะลบ "${title}"?`)) {
+      setDeletingId(id);
+      try {
+        const result = await deleteAnime(id);
+        if (result.error) {
+          throw result.error;
+        }
+        
+        toast({
+          title: "สำเร็จ!",
+          description: `ลบ "${title}" เรียบร้อยแล้ว`,
+        });
+      } catch (error) {
+        toast({
+          title: "ข้อผิดพลาด",
+          description: "ไม่สามารถลบข้อมูลได้ กรุณาลองใหม่อีกครั้ง",
+          variant: "destructive"
+        });
+        console.error('Error deleting anime:', error);
+      } finally {
+        setDeletingId(null);
+      }
     }
   };
 
@@ -100,102 +124,116 @@ export default function AnimeList() {
       {/* Results */}
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">
-          แสดง {filteredAnime.length} จาก {animeList.length} รายการ
+          {loading ? "กำลังโหลด..." : `แสดง ${filteredAnime.length} จาก ${animeList.length} รายการ`}
         </p>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      )}
+
       {/* Anime Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredAnime.map((anime) => (
-          <Card key={anime.id} className="bg-gradient-card border-border shadow-card hover:shadow-hover transition-all duration-300 group">
-            <CardHeader className="pb-3">
-              <div className="aspect-video bg-muted rounded-lg mb-3 flex items-center justify-center overflow-hidden">
-                {anime.image && anime.image !== "/placeholder.svg" ? (
-                  <img 
-                    src={anime.image} 
-                    alt={anime.title}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                  />
-                ) : (
-                  <Tv className="w-8 h-8 text-muted-foreground" />
-                )}
-              </div>
-              <CardTitle className="text-lg group-hover:text-primary transition-colors duration-200">
-                {anime.title}
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">{anime.titleJapanese}</p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Genres */}
-              <div className="flex flex-wrap gap-1">
-                {anime.genre.slice(0, 3).map((genre) => (
-                  <Badge
-                    key={genre}
-                    variant="secondary"
-                    className={`text-xs ${genreColors[genre] || 'bg-muted/50 text-muted-foreground'}`}
+      {!loading && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredAnime.map((anime) => (
+            <Card key={anime.id} className="bg-gradient-card border-border shadow-card hover:shadow-hover transition-all duration-300 group">
+              <CardHeader className="pb-3">
+                <div className="aspect-video bg-muted rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+                  {anime.image_url ? (
+                    <img 
+                      src={anime.image_url} 
+                      alt={anime.title}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <Tv className="w-8 h-8 text-muted-foreground" />
+                  )}
+                </div>
+                <CardTitle className="text-lg group-hover:text-primary transition-colors duration-200">
+                  {anime.title}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">{anime.publisher}</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Genres */}
+                <div className="flex flex-wrap gap-1">
+                  {anime.genres?.slice(0, 3).map((genre) => (
+                    <Badge
+                      key={genre}
+                      variant="secondary"
+                      className={`text-xs ${genreColors[genre] || 'bg-muted/50 text-muted-foreground'}`}
+                    >
+                      {genre}
+                    </Badge>
+                  ))}
+                  {(anime.genres?.length || 0) > 3 && (
+                    <Badge variant="secondary" className="text-xs">
+                      +{(anime.genres?.length || 0) - 3}
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="flex items-center space-x-1">
+                    <Star className="w-4 h-4 text-warning" />
+                    <span className="font-medium">{anime.popularity_score || 0}</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Tv className="w-4 h-4 text-info" />
+                    <span>{anime.format || "N/A"}</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    <span>{anime.first_aired ? new Date(anime.first_aired).getFullYear() : "N/A"}</span>
+                  </div>
+                  <div>
+                    <Badge
+                      variant="secondary"
+                      className="text-xs"
+                    >
+                      {anime.format || "TV Series"}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Publisher */}
+                <p className="text-xs text-muted-foreground border-t pt-3">
+                  Publisher: {anime.publisher || "Unknown"}
+                </p>
+
+                {/* Actions */}
+                <div className="flex space-x-2 pt-2">
+                  <Link to={`/anime/edit/${anime.id}`} className="flex-1">
+                    <Button variant="outline" size="sm" className="w-full">
+                      <Edit className="w-4 h-4 mr-1" />
+                      แก้ไข
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDelete(anime.id, anime.title)}
+                    disabled={deletingId === anime.id}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
                   >
-                    {genre}
-                  </Badge>
-                ))}
-                {anime.genre.length > 3 && (
-                  <Badge variant="secondary" className="text-xs">
-                    +{anime.genre.length - 3}
-                  </Badge>
-                )}
-              </div>
-
-              {/* Stats */}
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="flex items-center space-x-1">
-                  <Star className="w-4 h-4 text-warning" />
-                  <span className="font-medium">{anime.rating}</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Tv className="w-4 h-4 text-info" />
-                  <span>{anime.episodes} ตอน</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Calendar className="w-4 h-4 text-muted-foreground" />
-                  <span>{anime.year}</span>
-                </div>
-                <div>
-                  <Badge
-                    variant={anime.status === "Ongoing" ? "default" : "secondary"}
-                    className="text-xs"
-                  >
-                    {anime.status}
-                  </Badge>
-                </div>
-              </div>
-
-              {/* Studio */}
-              <p className="text-xs text-muted-foreground border-t pt-3">
-                Studio: {anime.studio}
-              </p>
-
-              {/* Actions */}
-              <div className="flex space-x-2 pt-2">
-                <Link to={`/anime/edit/${anime.id}`} className="flex-1">
-                  <Button variant="outline" size="sm" className="w-full">
-                    <Edit className="w-4 h-4 mr-1" />
-                    แก้ไข
+                    {deletingId === anime.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
                   </Button>
-                </Link>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDelete(anime.id)}
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-      {filteredAnime.length === 0 && (
+      {!loading && filteredAnime.length === 0 && (
         <Card className="bg-gradient-card border-border shadow-card">
           <CardContent className="text-center py-12">
             <Tv className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
