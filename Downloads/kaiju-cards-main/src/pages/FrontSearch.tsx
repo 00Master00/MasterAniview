@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, X } from "lucide-react";
+import { Search, Filter, X, CheckCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useToast } from "@/hooks/use-toast";
 import AnimeCard from "@/components/AnimeCard";
 import AnimeDetail from "@/components/AnimeDetail";
 import { useAnimeData } from "@/hooks/useAnimeData";
@@ -16,6 +17,7 @@ export default function FrontSearch() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedAnime, setSelectedAnime] = useState<any>(null);
   const { animeList, loading, searchAnime, getAllGenres } = useAnimeData();
+  const { toast } = useToast();
 
   const allGenres = getAllGenres();
 
@@ -39,6 +41,13 @@ export default function FrontSearch() {
 
   const handleAnimeSelect = (anime: any) => {
     setSelectedAnime(anime);
+  };
+
+  const handleSubmit = () => {
+    toast({
+      title: "ค้นหาสำเร็จ",
+      description: `พบ ${searchResults.length} รายการ`,
+    });
   };
 
   if (loading) {
@@ -131,7 +140,7 @@ export default function FrontSearch() {
                       onClick={clearFilters}
                       className="w-full"
                     >
-                      Clear All Filters
+                      Clear All
                     </Button>
                   )}
                 </div>
@@ -139,14 +148,24 @@ export default function FrontSearch() {
             </Sheet>
 
             {(selectedGenres.length > 0 || searchQuery) && (
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={clearFilters}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Clear All
-              </Button>
+              <>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={clearFilters}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Clear All
+                </Button>
+                <Button 
+                  size="sm"
+                  onClick={handleSubmit}
+                  className="bg-gradient-primary hover:opacity-90"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Submit
+                </Button>
+              </>
             )}
           </div>
 

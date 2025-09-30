@@ -11,3 +11,4 @@
 ```bash
 git clone https://github.com/00Master00/kaiju-cards
 cd MasterAniview-Manager
+=======

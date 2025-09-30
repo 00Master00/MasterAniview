@@ -1,17 +1,17 @@
 import { useState } from "react";
-import { ArrowLeft, Calendar } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import AnimeCard from "@/components/AnimeCard";
 import AnimeDetail from "@/components/AnimeDetail";
 import { useAnimeData } from "@/hooks/useAnimeData";
-import { useNavigate } from "react-router-dom";
 
 export default function FrontUpdates() {
   const [selectedAnime, setSelectedAnime] = useState<any>(null);
+  const [selectedDay, setSelectedDay] = useState<string>("Su");
   const { loading, getUpdatesByDay } = useAnimeData();
-  const navigate = useNavigate();
 
   const updatesByDay = getUpdatesByDay();
   const days = [
@@ -23,10 +23,6 @@ export default function FrontUpdates() {
     { key: 'F', name: 'Friday' },
     { key: 'Sa', name: 'Saturday' }
   ];
-
-  const handleBack = () => {
-    navigate('/front');
-  };
 
   const handleAnimeSelect = (anime: any) => {
     setSelectedAnime(anime);
@@ -48,31 +44,39 @@ export default function FrontUpdates() {
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button 
-          variant="ghost" 
-          size="sm"
-          onClick={handleBack}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-        <div className="flex items-center gap-2">
-          <Calendar className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl font-bold text-foreground">Weekly Updates</h1>
-        </div>
+      <div className="flex items-center gap-2 mb-6">
+        <Calendar className="w-6 h-6 text-primary" />
+        <h1 className="text-2xl font-bold text-foreground">Weekly Updates</h1>
       </div>
 
-      {/* Days of the Week */}
-      <div className="space-y-6">
+      {/* Day Selector Tabs */}
+      <Tabs value={selectedDay} onValueChange={setSelectedDay}>
+        <TabsList className="grid w-full grid-cols-7 gap-2">
+          {days.map((day) => {
+            const dayUpdates = updatesByDay[day.key] || [];
+            return (
+              <TabsTrigger 
+                key={day.key} 
+                value={day.key}
+                className="flex flex-col items-center gap-1"
+              >
+                <span className="font-bold">{day.key}</span>
+                <Badge variant="secondary" className="text-xs">
+                  {dayUpdates.length}
+                </Badge>
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+
+        {/* Day Content */}
         {days.map((day) => {
           const dayUpdates = updatesByDay[day.key] || [];
           
           return (
-            <Card key={day.key} className="shadow-card border-border">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
+            <TabsContent key={day.key} value={day.key} className="mt-0">
+              <Card className="shadow-card border-border">
+                <CardHeader className="pb-4">
                   <CardTitle className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                       <span className="text-primary font-bold text-lg">
@@ -88,16 +92,9 @@ export default function FrontUpdates() {
                       </p>
                     </div>
                   </CardTitle>
-                  
-                  {dayUpdates.length > 0 && (
-                    <Badge variant="secondary" className="bg-primary/10 text-primary">
-                      {dayUpdates.length}
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
+                </CardHeader>
 
-              <CardContent>
+                <CardContent>
                 {dayUpdates.length > 0 ? (
                   <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
                     {dayUpdates.map((update) => (
@@ -117,9 +114,10 @@ export default function FrontUpdates() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
           );
         })}
-      </div>
+      </Tabs>
 
       {/* Anime Detail Modal */}
       {selectedAnime && (

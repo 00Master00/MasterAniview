@@ -1,14 +1,12 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAnimeData } from "@/hooks/useAnimeData";
 import StatCard from "@/components/StatCard";
+import AnimeDetail from "@/components/AnimeDetail";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { 
   Tv, 
   TrendingUp, 
-  Users, 
   Star,
   Calendar,
   Eye,
@@ -34,7 +32,7 @@ function getTimeAgo(timestamp: Date): string {
 
 export default function Dashboard() {
   const { animeList, recentUpdates, loading } = useAnimeData();
-  const navigate = useNavigate();
+  const [selectedAnime, setSelectedAnime] = useState<any>(null);
   const [stats, setStats] = useState({
     totalAnime: 0,
     totalViews: 0,
@@ -128,7 +126,7 @@ export default function Dashboard() {
              {popularAnime.map((anime, index) => (
                <div
                  key={anime.id}
-                 onClick={() => navigate(`/anime/edit/${anime.id}`)}
+                 onClick={() => setSelectedAnime(anime)}
                  className="flex items-center space-x-4 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors duration-200 cursor-pointer group"
                >
                  <div className="w-2 h-2 bg-gradient-primary rounded-full"></div>
@@ -182,8 +180,8 @@ export default function Dashboard() {
                      key={update.id}
                      className="flex items-start space-x-3 p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
                      onClick={() => {
-                       if (update.anime_id) {
-                         navigate(`/anime/edit/${update.anime_id}`);
+                       if (update.anime) {
+                         setSelectedAnime(update.anime);
                        }
                      }}
                    >
@@ -207,6 +205,15 @@ export default function Dashboard() {
            </CardContent>
         </Card>
       </div>
+
+      {/* Anime Detail Modal */}
+      {selectedAnime && (
+        <AnimeDetail 
+          anime={selectedAnime}
+          isOpen={!!selectedAnime}
+          onClose={() => setSelectedAnime(null)}
+        />
+      )}
     </div>
   );
 }

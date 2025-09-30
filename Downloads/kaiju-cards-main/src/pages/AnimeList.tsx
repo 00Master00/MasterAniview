@@ -83,7 +83,7 @@ export default function AnimeList() {
             จัดการข้อมูล Anime ทั้งหมดในระบบ
           </p>
         </div>
-        <Link to="/anime/add">
+        <Link to="/admin/anime/add">
           <Button className="bg-gradient-primary hover:opacity-90 shadow-elegant">
             <Plus className="w-4 h-4 mr-2" />
             เพิ่ม Anime ใหม่
@@ -207,7 +207,7 @@ export default function AnimeList() {
 
                 {/* Actions */}
                 <div className="flex space-x-2 pt-2">
-                  <Link to={`/anime/edit/${anime.id}`} className="flex-1">
+                  <Link to={`/admin/anime/edit/${anime.id}`} className="flex-1">
                     <Button variant="outline" size="sm" className="w-full">
                       <Edit className="w-4 h-4 mr-1" />
                       แก้ไข

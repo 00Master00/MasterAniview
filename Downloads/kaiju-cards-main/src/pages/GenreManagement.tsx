@@ -1,16 +1,20 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAnime } from "@/contexts/AnimeContext";
+import AnimeDetail from "@/components/AnimeDetail";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Plus, 
   Trash2, 
   Tag,
   Search,
-  Eye
+  Eye,
+  Tv,
+  Star,
+  Calendar
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -28,10 +32,11 @@ const initialGenres = [
 ];
 
 export default function GenreManagement() {
-  const navigate = useNavigate();
   const { animeList } = useAnime();
   const [newGenre, setNewGenre] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
+  const [selectedAnime, setSelectedAnime] = useState<any>(null);
   const { toast } = useToast();
 
   // Calculate actual genre counts from anime data
@@ -115,6 +120,10 @@ export default function GenreManagement() {
     }
   };
 
+  const genreAnime = selectedGenre 
+    ? animeList.filter(anime => anime.genre.includes(selectedGenre))
+    : [];
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -188,7 +197,7 @@ export default function GenreManagement() {
               >
                 <div 
                   className="flex items-center space-x-3 flex-1 cursor-pointer"
-                  onClick={() => navigate(`/genres/${genre.name}/anime`)}
+                  onClick={() => genre.count > 0 && setSelectedGenre(genre.name)}
                 >
                   <div className="w-3 h-3 bg-primary rounded-full"></div>
                   <div>
@@ -205,7 +214,7 @@ export default function GenreManagement() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => navigate(`/genres/${genre.name}/anime`)}
+                      onClick={() => setSelectedGenre(genre.name)}
                       className="p-2 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <Eye className="w-4 h-4" />
@@ -284,6 +293,77 @@ export default function GenreManagement() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Genre Anime List Dialog */}
+      <Dialog open={!!selectedGenre} onOpenChange={() => setSelectedGenre(null)}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Anime ประเภท "{selectedGenre}" ({genreAnime.length} รายการ)
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
+            {genreAnime.map((anime) => (
+              <Card 
+                key={anime.id} 
+                className="cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => {
+                  setSelectedAnime({
+                    id: anime.id.toString(),
+                    title: anime.title,
+                    image_url: anime.image,
+                    genres: anime.genre,
+                    publisher: anime.studio,
+                    first_aired: anime.year.toString(),
+                    format: anime.status,
+                    description: anime.description,
+                    popularity_score: anime.rating * 10
+                  });
+                  setSelectedGenre(null);
+                }}
+              >
+                <CardContent className="p-0">
+                  <div className="aspect-[3/4] bg-muted rounded-t-lg overflow-hidden">
+                    {anime.image && anime.image !== "/placeholder.svg" ? (
+                      <img 
+                        src={anime.image} 
+                        alt={anime.title}
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Tv className="w-12 h-12 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3 space-y-2">
+                    <h4 className="font-medium text-sm line-clamp-2">{anime.title}</h4>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="flex items-center">
+                        <Star className="w-3 h-3 mr-1 text-warning" />
+                        {anime.rating || 0}
+                      </div>
+                      <div className="flex items-center">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        {anime.year}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Anime Detail Modal */}
+      {selectedAnime && (
+        <AnimeDetail 
+          anime={selectedAnime}
+          isOpen={!!selectedAnime}
+          onClose={() => setSelectedAnime(null)}
+        />
+      )}
     </div>
   );
 }

@@ -17,6 +17,7 @@ import FrontSearch from "@/pages/FrontSearch";
 import FrontPopular from "@/pages/FrontPopular";
 import FrontUpdates from "@/pages/FrontUpdates";
 import Login from "@/pages/Login";
+import Welcome from "@/pages/Welcome";
 import NotFound from "./pages/NotFound";
 import { AnimeProvider } from "@/contexts/AnimeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -31,6 +32,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
+            <Route path="/" element={<Welcome />} />
             <Route path="/login" element={<Login />} />
             <Route path="/admin/*" element={
               <ProtectedRoute>
@@ -63,7 +65,6 @@ const App = () => (
                 </FrontOfficeLayout>
               </ProtectedRoute>
             } />
-            <Route path="/" element={<Navigate to="/front" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
