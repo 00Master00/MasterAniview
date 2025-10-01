@@ -4,7 +4,7 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: "/kaiju-cards/", // 👈 ต้องตรงกับชื่อ repo
+  base: "/Welcome", // 👈 ต้องตรงกับชื่อ repo
   server: {
     host: "::",
     port: 8080,
